@@ -1,8 +1,5 @@
-export type ApiErrorBody = {
-  code: string;
-  message: string;
-  fieldErrors?: Record<string, string[]>;
-};
+import { getOptionalSession } from "./session";
+import { type ApiErrorBody, BackendRequestError } from "./backend-errors";
 
 type ApiResponse<T> = {
   success: boolean;
@@ -11,52 +8,36 @@ type ApiResponse<T> = {
 };
 
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://127.0.0.1:4000";
-const BACKEND_API_TOKEN = process.env.BACKEND_API_TOKEN ?? "dev-local-token";
-const BACKEND_USER_ID = process.env.BACKEND_USER_ID ?? "local-zw-user";
 
-export class BackendRequestError extends Error {
-  readonly status: number;
-  readonly code: string;
-  readonly fieldErrors?: Record<string, string[]>;
+type BackendRequestInit = RequestInit & {
+  requiresAuth?: boolean;
+};
 
-  constructor(input: {
-    status: number;
-    message: string;
-    code?: string;
-    fieldErrors?: Record<string, string[]>;
-  }) {
-    super(input.message);
-    this.name = "BackendRequestError";
-    this.status = input.status;
-    this.code = input.code ?? "BACKEND_REQUEST_ERROR";
-    this.fieldErrors = input.fieldErrors;
-  }
-}
+export async function backendRequest<T>(path: string, init?: BackendRequestInit): Promise<T> {
+  const { requiresAuth = true, headers, ...requestInit } = init ?? {};
+  const session = requiresAuth ? await getOptionalSession() : null;
 
-export function getBackendErrorMessage(
-  error: unknown,
-  fallback = "Something went wrong. Please try again.",
-) {
-  if (error instanceof BackendRequestError) {
-    return error.message;
+  if (requiresAuth && !session) {
+    throw new BackendRequestError({
+      status: 401,
+      code: "UNAUTHORIZED",
+      message: "Please sign in to continue.",
+    });
   }
 
-  if (error instanceof Error && error.message) {
-    return error.message;
+  const resolvedHeaders = new Headers(headers ?? {});
+
+  if (!resolvedHeaders.has("Content-Type") && requestInit.body) {
+    resolvedHeaders.set("Content-Type", "application/json");
   }
 
-  return fallback;
-}
+  if (session?.token) {
+    resolvedHeaders.set("Authorization", `Bearer ${session.token}`);
+  }
 
-export async function backendRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${BACKEND_URL}${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${BACKEND_API_TOKEN}`,
-      "x-user-id": BACKEND_USER_ID,
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
+    ...requestInit,
+    headers: resolvedHeaders,
     cache: "no-store",
   });
 

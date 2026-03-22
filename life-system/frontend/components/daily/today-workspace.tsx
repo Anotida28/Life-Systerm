@@ -22,7 +22,7 @@ import { ScoreBreakdownCard } from "@/components/daily/score-breakdown-card";
 import { StreakCard } from "@/components/daily/streak-card";
 import { TaskSection } from "@/components/daily/task-section";
 import { ActionNotice } from "@/components/shared/action-notice";
-import { getBackendErrorMessage } from "@/lib/backend-api";
+import { getBackendErrorMessage } from "@/lib/backend-errors";
 import { syncDailyRecordViewMetrics } from "@/lib/scoring";
 import type { DailyRecordView, DailyTaskItem, TaskType } from "@/types";
 

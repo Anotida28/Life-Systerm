@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarClock, ChartNoAxesCombined, Flame, History, ListTodo, Sparkles } from "lucide-react";
+import { CalendarClock, ChartNoAxesCombined, Flame, History, ListTodo, LogOut, Sparkles } from "lucide-react";
 
+import { logoutAction } from "@/actions/auth";
 import { Button } from "@/components/shared/button";
 import { cn } from "@/lib/utils";
 
@@ -15,7 +16,7 @@ const items = [
   { href: "/insights", label: "Insights", icon: Sparkles },
 ];
 
-export function TopBar() {
+export function TopBar({ userDisplayName }: { userDisplayName?: string }) {
   const pathname = usePathname();
 
   return (
@@ -60,10 +61,21 @@ export function TopBar() {
           })}
         </nav>
 
-        <div className="hidden sm:block">
+        <div className="hidden items-center gap-3 sm:flex">
+          {userDisplayName ? (
+            <div className="rounded-full border border-[color:var(--line)] bg-[rgba(255,255,255,0.04)] px-4 py-2 text-sm text-[color:var(--text-secondary)]">
+              Signed in as <span className="font-medium text-[color:var(--text-primary)]">{userDisplayName}</span>
+            </div>
+          ) : null}
           <Button asChild variant="secondary">
             <Link href="/today">Open Today</Link>
           </Button>
+          <form action={logoutAction}>
+            <Button type="submit" variant="ghost">
+              <LogOut className="h-4 w-4" />
+              Sign out
+            </Button>
+          </form>
         </div>
       </div>
     </header>

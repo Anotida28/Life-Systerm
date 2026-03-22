@@ -8,7 +8,7 @@ import { ActionNotice } from "@/components/shared/action-notice";
 import { Button } from "@/components/shared/button";
 import { SectionCard } from "@/components/shared/section-card";
 import { Textarea } from "@/components/shared/textarea";
-import { getBackendErrorMessage } from "@/lib/backend-api";
+import { getBackendErrorMessage } from "@/lib/backend-errors";
 import type { WeeklyReviewView } from "@/types";
 
 export function WeeklyReviewForm({ initialReview }: { initialReview: WeeklyReviewView }) {

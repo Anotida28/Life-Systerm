@@ -1,18 +1,25 @@
 # Life System Backend
 
-Fastify + TypeScript API service for Life System, backed by Prisma and SQLite.
+Fastify + TypeScript API service for Life System, backed by Prisma.
 
 ## Role in the Repo
 
-The backend is the canonical source of truth for:
+The backend owns:
 
-- Prisma schema
-- database setup
+- Prisma schema and client generation
+- user/session authentication
 - seed data
-- validation and persistence rules
+- scoring and persistence rules
 - API error semantics
 
-The local development database lives at `frontend/prisma/dev.db`, but it is owned by the backend setup flow.
+## Database Mode
+
+The backend is designed to work in two modes:
+
+- Local dev: SQLite at `frontend/prisma/dev.db`
+- Railway / production: PostgreSQL
+
+`npm run prisma:generate` and `npm run prisma:push` automatically detect the database type from `DATABASE_URL` and select the matching Prisma schema.
 
 ## Setup
 
@@ -27,42 +34,54 @@ npm run prisma:seed
 npm run dev
 ```
 
-Before running the server, copy `.env.example` to `.env`.
+Copy `.env.example` to `.env` before running the server.
 
-Defaults:
+## Seeded Login
 
-- API: `http://127.0.0.1:4000`
-- Health: `GET /health`
+Default seeded login:
+
+- Username: `Lourence`
+- Password: `RuvaMakoAno28`
+
+By default the seeded login is attached to `DEFAULT_USER_ID`, which lets the login account reuse the main local dataset.
 
 ## Environment Variables
 
-Defined in `.env.example`:
+Important variables in `.env.example`:
 
-- `DATABASE_URL` default `file:../../frontend/prisma/dev.db`
-- `PORT` default `4000`
-- `NODE_ENV` default `development`
-- `BACKEND_API_TOKEN` required bearer token for `/api/*`
-- `DEFAULT_USER_ID` default seeded user and request fallback
-- `SEED_DEMO_DAY` optional demo-data toggle for `npm run prisma:seed`
+- `DATABASE_URL`
+- `PORT`
+- `NODE_ENV`
+- `DEFAULT_USER_ID`
+- `SEED_LOGIN_USERNAME`
+- `SEED_LOGIN_DISPLAY_NAME`
+- `SEED_LOGIN_PASSWORD`
+- `SESSION_TTL_DAYS`
+- `SEED_DEMO_DAY`
+- `BACKEND_API_TOKEN` optional internal service token for non-session automation and tests
 
-## Authentication and User Isolation
+## Authentication
 
-- `/health` is public.
-- All `/api/*` routes require:
-  - `Authorization: Bearer <BACKEND_API_TOKEN>`
-  - `x-user-id: <user-id>`
-- User records are auto-upserted on authenticated requests.
-- Core records are scoped by `userId`.
+Public endpoints:
+
+- `GET /health`
+- `POST /api/auth/login`
+
+Authenticated user endpoints accept a bearer session token:
+
+- `Authorization: Bearer <session-token>`
+
+The old internal token + `x-user-id` flow is still supported for automated tests and internal service access when `BACKEND_API_TOKEN` is configured.
 
 ## Error Contract
 
-The API returns a consistent response envelope:
+The API response envelope is:
 
 - `success`
 - `data`
 - `error`
 
-Structured backend errors currently resolve to:
+Current structured errors:
 
 - `400 VALIDATION_ERROR`
 - `401 UNAUTHORIZED`
@@ -71,6 +90,12 @@ Structured backend errors currently resolve to:
 - `500 INTERNAL_ERROR`
 
 ## Implemented Endpoints
+
+### Auth
+
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- `POST /api/auth/logout`
 
 ### Health
 
@@ -111,21 +136,31 @@ Structured backend errors currently resolve to:
 - `GET /api/insights`
 - `POST /api/insights/refresh`
 
-## Business Rules
+## Railway
 
-- Dates normalize to `Africa/Harare`.
-- Habits are weighted at 50%, personal tasks 25%, work tasks 25%.
-- Success threshold is 80%.
-- Creating a new day loads active habits and rolls over incomplete personal and work tasks.
-- Score-changing mutations recalculate daily metrics and streak snapshots.
+This directory includes `railway.toml`.
+
+Recommended Railway service settings:
+
+- service root: `backend/`
+- attached database: Railway PostgreSQL
+- start command: `npm run start:railway`
+- health check: `/health`
+
+`npm run start:railway` runs:
+
+1. `prisma db push`
+2. `prisma seed`
+3. `node dist/server.js`
 
 ## Scripts
 
-- `npm run dev` start backend in watch mode
-- `npm run build` compile TypeScript
-- `npm run start` run compiled output
-- `npm run typecheck` TypeScript no-emit check
-- `npm run test` run backend tests
-- `npm run prisma:generate` generate Prisma client
-- `npm run prisma:push` push schema to the local DB
-- `npm run prisma:seed` seed default habits and optional demo data
+- `npm run dev`
+- `npm run build`
+- `npm run start`
+- `npm run start:railway`
+- `npm run typecheck`
+- `npm run test`
+- `npm run prisma:generate`
+- `npm run prisma:push`
+- `npm run prisma:seed`

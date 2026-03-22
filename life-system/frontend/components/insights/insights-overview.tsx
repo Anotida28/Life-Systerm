@@ -13,7 +13,7 @@ import { ActionNotice } from "@/components/shared/action-notice";
 import { Button } from "@/components/shared/button";
 import { InsightCard } from "@/components/shared/insight-card";
 import { MetricCard } from "@/components/shared/metric-card";
-import { getBackendErrorMessage } from "@/lib/backend-api";
+import { getBackendErrorMessage } from "@/lib/backend-errors";
 import { formatHistoryDate, parseDateKey } from "@/lib/date";
 import type { InsightsView } from "@/types";
 

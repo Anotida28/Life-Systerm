@@ -14,7 +14,7 @@ import { HabitForm } from "@/components/habits/habit-form";
 import { ActionNotice } from "@/components/shared/action-notice";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SectionCard } from "@/components/shared/section-card";
-import { getBackendErrorMessage } from "@/lib/backend-api";
+import { getBackendErrorMessage } from "@/lib/backend-errors";
 import type { HabitView } from "@/types";
 
 export function HabitsList({ initialHabits }: { initialHabits: HabitView[] }) {

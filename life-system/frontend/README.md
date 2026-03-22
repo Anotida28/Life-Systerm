@@ -4,26 +4,28 @@ Next.js 16 App Router frontend for Life System.
 
 ## What This App Does
 
-The frontend renders the product surfaces and delegates persistence to the backend API:
+The frontend renders the product surfaces and uses the backend API for all persistence:
 
 - Dashboard (`/`)
 - Today workspace (`/today`)
-- Habits management (`/habits`)
-- History list and detail (`/history`, `/history/[date]`)
+- Habits (`/habits`)
+- History (`/history`, `/history/[date]`)
 - Weekly review (`/weekly`)
 - Insights (`/insights`)
+- Login (`/login`)
 
-Server actions are thin wrappers around backend endpoints and then revalidate the affected routes.
+Server actions call backend endpoints, manage session cookies, and revalidate the affected routes.
 
-## Runtime Dependency
+## Authentication
 
-This app expects the backend API to be running.
+The frontend now uses a real login flow backed by backend sessions.
 
-Default backend URL:
+Seeded account:
 
-- `http://127.0.0.1:4000`
+- Username: `Lourence`
+- Password: `RuvaMakoAno28`
 
-Configured via `BACKEND_URL` in `.env.local`.
+Session cookies are stored server-side and protected routes are redirected to `/login` when no valid session exists.
 
 ## Setup
 
@@ -35,7 +37,7 @@ npm install
 npm run dev
 ```
 
-Before starting the app, copy `.env.example` to `.env.local`.
+Copy `.env.example` to `.env.local` before starting the app.
 
 Open `http://localhost:3000`.
 
@@ -45,33 +47,45 @@ Open `http://localhost:3000`.
 
 ```env
 BACKEND_URL="http://127.0.0.1:4000"
-BACKEND_API_TOKEN="dev-local-token"
-BACKEND_USER_ID="local-zw-user"
 ```
 
-Notes:
+For Railway, point `BACKEND_URL` to the backend's private Railway URL.
 
-- Frontend sends authenticated requests to the backend using `BACKEND_API_TOKEN` and `BACKEND_USER_ID`.
-- Backend must use matching auth values in `backend/.env`.
-- The frontend no longer owns Prisma schema, migrations, or seeding.
+## Runtime Dependency
+
+This frontend expects the backend API to be running and seeded.
+
+Recommended backend startup before opening the app:
+
+```bash
+cd ../backend
+npm run prisma:push
+npm run prisma:seed
+npm run dev
+```
+
+## Railway
+
+This directory includes `railway.toml`.
+
+Recommended Railway service settings:
+
+- service root: `frontend/`
+- public networking enabled
+- `BACKEND_URL` set to the backend's private Railway URL
 
 ## Scripts
 
-- `npm run dev` start Next dev server
-- `npm run build` production build
-- `npm run start` run production server
-- `npm run lint` lint source
-- `npm run test` run tests once
-- `npm run test:watch` run tests in watch mode
+- `npm run dev`
+- `npm run build`
+- `npm run start`
+- `npm run lint`
+- `npm run test`
+- `npm run test:watch`
 
-## Frontend Data Notes
+## Frontend Notes
 
-- Shared enum-like types such as `TaskType`, `InsightSeverity`, and `InsightCategory` are defined in `types/index.ts`.
-- Date handling mirrors backend `Africa/Harare` normalization rules.
-- Mutation failures are surfaced through typed backend request errors in the UI.
-
-## Troubleshooting
-
-- If pages load but actions fail, verify the backend is running on `BACKEND_URL`.
-- If backend requests return auth errors, verify `BACKEND_API_TOKEN` and `BACKEND_USER_ID` match backend env values.
-- If the backend schema changes, rerun backend setup commands in `backend/` rather than trying to manage DB state from the frontend.
+- Shared enum-like types live in `types/index.ts`
+- Date handling mirrors backend `Africa/Harare` normalization
+- Mutation failures surface as typed backend request errors
+- Login, logout, and session persistence are handled with server actions and HTTP-only cookies

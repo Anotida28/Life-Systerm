@@ -3,18 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc -p tsconfig.json",
-    "start": "node dist/server.js",
-    "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/**/*.test.ts",
-    "prisma:generate": "prisma generate",
-    "prisma:push": "prisma db push",
-    "prisma:seed": "tsx prisma/seed.ts"
+  "engines": {
+    "node": ">=20.9.0"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
+  "scripts": {
+    "dev": "npm run prisma:generate && tsx watch src/server.ts",
+    "build": "npm run prisma:generate && tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "start:railway": "npm run prisma:push && npm run prisma:seed && node dist/server.js",
+    "typecheck": "npm run prisma:generate && tsc --noEmit",
+    "test": "npm run prisma:generate && tsx --test tests/**/*.test.ts",
+    "prisma:generate": "node scripts/prisma-command.mjs generate",
+    "prisma:push": "node scripts/prisma-command.mjs db push",
+    "prisma:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { DEFAULT_USER_ID, SEEDED_LOGIN_PASSWORD, seedLoginUser } from "../src/lib/auth.js";
 import { prisma } from "../src/lib/prisma.js";
 import { buildApp } from "../src/server.js";
 
@@ -110,6 +111,47 @@ test("concurrent task writes keep streak snapshots valid", async () => {
     assert.ok(refreshedBody.data.dailyTasks.length >= 8);
     assert.ok(refreshedBody.data.currentStreakSnapshot >= 0);
     assert.ok(refreshedBody.data.longestStreakSnapshot >= refreshedBody.data.currentStreakSnapshot);
+  } finally {
+    await app.close();
+  }
+});
+
+test("login endpoint returns a reusable session token", async () => {
+  const app = buildApp();
+
+  try {
+    await seedLoginUser(prisma, DEFAULT_USER_ID);
+
+    const login = await app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      payload: {
+        username: "Lourence",
+        password: SEEDED_LOGIN_PASSWORD,
+      },
+    });
+
+    assert.equal(login.statusCode, 200);
+
+    const loginBody = login.json() as {
+      data: {
+        token: string;
+        user: { displayName: string };
+      };
+    };
+
+    assert.ok(loginBody.data.token.length > 20);
+    assert.equal(loginBody.data.user.displayName, "Lourence");
+
+    const me = await app.inject({
+      method: "GET",
+      url: "/api/auth/me",
+      headers: {
+        authorization: `Bearer ${loginBody.data.token}`,
+      },
+    });
+
+    assert.equal(me.statusCode, 200);
   } finally {
     await app.close();
   }

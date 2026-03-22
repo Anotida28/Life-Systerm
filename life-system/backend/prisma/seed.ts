@@ -2,6 +2,7 @@ import "dotenv/config";
 
 import { PrismaClient, TaskType } from "@prisma/client";
 
+import { seedLoginUser } from "../src/lib/auth.js";
 import { DEFAULT_HABITS, SUCCESS_THRESHOLD } from "../src/lib/constants.js";
 import { normalizeDate } from "../src/lib/date.js";
 import { getMetricsFromCollections } from "../src/lib/scoring.js";
@@ -25,14 +26,6 @@ function getStreakSnapshots(records: Array<{ wasSuccessfulDay: boolean }>) {
       currentStreakSnapshot: currentStreak,
       longestStreakSnapshot: longestStreak,
     };
-  });
-}
-
-async function ensureUserExists(userId: string) {
-  await prisma.user.upsert({
-    where: { id: userId },
-    update: {},
-    create: { id: userId },
   });
 }
 
@@ -162,7 +155,7 @@ async function seedDemoDay(userId: string) {
 }
 
 async function main() {
-  await ensureUserExists(DEFAULT_USER_ID);
+  await seedLoginUser(prisma, DEFAULT_USER_ID);
   await seedDefaultHabits(DEFAULT_USER_ID);
   await seedDemoDay(DEFAULT_USER_ID);
 }

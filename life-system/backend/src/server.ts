@@ -5,9 +5,10 @@ import Fastify from "fastify";
 import { pathToFileURL } from "node:url";
 import { ZodError } from "zod";
 
-import { ensureUserExists, registerAuthHook, DEFAULT_USER_ID } from "./lib/auth.js";
+import { registerAuthHook, seedLoginUser } from "./lib/auth.js";
 import { prisma } from "./lib/prisma.js";
 import { errorResponse } from "./lib/response.js";
+import { registerAuthRoutes } from "./routes/auth.js";
 import { registerDailyRoutes } from "./routes/daily.js";
 import { registerHabitRoutes } from "./routes/habits.js";
 import { registerHealthRoutes } from "./routes/health.js";
@@ -61,6 +62,7 @@ export function buildApp() {
     reply.code(500).send(errorResponse("INTERNAL_ERROR", "Unexpected server error"));
   });
 
+  app.register(registerAuthRoutes);
   app.register(registerHealthRoutes);
   app.register(registerHabitRoutes);
   app.register(registerDailyRoutes);
@@ -80,7 +82,7 @@ const host = "0.0.0.0";
 
 async function start() {
   const app = buildApp();
-  await ensureUserExists(prisma, DEFAULT_USER_ID);
+  await seedLoginUser(prisma);
   await app.listen({ port, host });
   app.log.info(`Backend listening on http://${host}:${port}`);
 }
