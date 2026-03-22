@@ -38,6 +38,10 @@ export async function toggleDailyHabitAction(input: {
   return record;
 }
 
+export async function refreshTodayAction() {
+  return backendRequest<DailyRecordView>("/api/daily/today");
+}
+
 export async function createTaskAction(input: {
   dailyRecordId: string;
   title: string;

@@ -1,4 +1,4 @@
-export const DEFAULT_HABITS = ["Pray", "Gym", "Course"] as const;
+export const APP_TIME_ZONE = "Africa/Harare";
 
 export const CATEGORY_WEIGHTS = {
   habits: 0.5,

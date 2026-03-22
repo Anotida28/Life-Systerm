@@ -29,7 +29,7 @@ export function TaskItem({
 }: {
   task: DailyTaskItem;
   onToggle: (taskId: string, completed: boolean) => Promise<void>;
-  onSave: (taskId: string, title: string) => Promise<void>;
+  onSave: (taskId: string, title: string) => Promise<boolean>;
   onDelete: (taskId: string) => Promise<void>;
   onMove: (taskId: string, direction: "up" | "down") => Promise<void>;
   isBusy?: boolean;
@@ -74,8 +74,11 @@ export function TaskItem({
                     return;
                   }
 
-                  await onSave(task.id, nextTitle);
-                  setIsEditing(false);
+                  const didSave = await onSave(task.id, nextTitle);
+
+                  if (didSave) {
+                    setIsEditing(false);
+                  }
                 }}
               >
                 <Input

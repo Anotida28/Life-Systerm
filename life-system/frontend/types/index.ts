@@ -1,8 +1,13 @@
-import type {
-  InsightCategory,
-  InsightSeverity,
-  TaskType,
-} from "@prisma/client";
+export type TaskType = "PERSONAL" | "WORK";
+export type InsightSeverity = "LOW" | "MEDIUM" | "HIGH";
+export type InsightCategory =
+  | "HABIT"
+  | "BALANCE"
+  | "WORKLOAD"
+  | "TREND"
+  | "PRODUCTIVITY"
+  | "WEEKDAY"
+  | "SUCCESS";
 
 export type DayStatus = "NOT_STARTED" | "IN_PROGRESS" | "SUCCESSFUL" | "MISSED";
 

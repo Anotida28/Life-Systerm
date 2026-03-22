@@ -10,7 +10,7 @@ export function DailySummaryStrip({ record }: { record: DailyRecordView }) {
   return (
     <SectionCard
       title={formatLongDate(parseDateKey(record.date))}
-      description="Live performance, streak pressure, and today’s execution status."
+      description="Live performance, streak pressure, and today's execution status."
       className="rounded-[1.9rem]"
     >
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -19,8 +19,13 @@ export function DailySummaryStrip({ record }: { record: DailyRecordView }) {
           <div className="space-y-3">
             <StatusBadge status={record.dayStatus} />
             <p className="max-w-md text-sm leading-6 text-[color:var(--text-secondary)]">
-              A successful day begins at <span className="text-[color:var(--text-primary)]">80%</span>.
-              You have completed <span className="text-[color:var(--text-primary)]">{record.totalCompletedItems}</span> items so far.
+              A successful day begins at{" "}
+              <span className="text-[color:var(--text-primary)]">80%</span>. You have
+              completed{" "}
+              <span className="text-[color:var(--text-primary)]">
+                {record.totalCompletedItems}
+              </span>{" "}
+              items so far.
             </p>
           </div>
         </div>

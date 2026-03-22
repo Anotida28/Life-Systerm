@@ -1,24 +1,56 @@
 import "dotenv/config";
 
-import { TaskType } from "@prisma/client";
-import { subDays } from "date-fns";
+import { PrismaClient, TaskType } from "@prisma/client";
 
-import { DEFAULT_HABITS, SUCCESS_THRESHOLD } from "@/lib/constants";
-import { getMetricsFromCollections, getStreakSnapshots } from "@/lib/domain/scoring";
-import { normalizeDate } from "@/lib/date";
-import { prisma } from "@/lib/prisma";
+import { DEFAULT_HABITS, SUCCESS_THRESHOLD } from "../src/lib/constants.js";
+import { normalizeDate } from "../src/lib/date.js";
+import { getMetricsFromCollections } from "../src/lib/scoring.js";
 
-async function seedDefaultHabits() {
+const prisma = new PrismaClient();
+const DEFAULT_USER_ID = process.env.DEFAULT_USER_ID ?? "local-zw-user";
+
+function getStreakSnapshots(records: Array<{ wasSuccessfulDay: boolean }>) {
+  let currentStreak = 0;
+  let longestStreak = 0;
+
+  return records.map((record) => {
+    if (record.wasSuccessfulDay) {
+      currentStreak += 1;
+      longestStreak = Math.max(longestStreak, currentStreak);
+    } else {
+      currentStreak = 0;
+    }
+
+    return {
+      currentStreakSnapshot: currentStreak,
+      longestStreakSnapshot: longestStreak,
+    };
+  });
+}
+
+async function ensureUserExists(userId: string) {
+  await prisma.user.upsert({
+    where: { id: userId },
+    update: {},
+    create: { id: userId },
+  });
+}
+
+async function seedDefaultHabits(userId: string) {
   for (const [index, habitName] of DEFAULT_HABITS.entries()) {
     await prisma.habit.upsert({
       where: {
-        name: habitName,
+        userId_name: {
+          userId,
+          name: habitName,
+        },
       },
       update: {
         order: index,
         isActive: true,
       },
       create: {
+        userId,
         name: habitName,
         order: index,
       },
@@ -26,15 +58,20 @@ async function seedDefaultHabits() {
   }
 }
 
-async function seedDemoDay() {
+async function seedDemoDay(userId: string) {
   if (process.env.SEED_DEMO_DAY !== "true") {
     return;
   }
 
   const today = normalizeDate();
-  const yesterday = normalizeDate(subDays(today, 1));
+  const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
   const existing = await prisma.dailyRecord.findUnique({
-    where: { date: yesterday },
+    where: {
+      userId_date: {
+        userId,
+        date: yesterday,
+      },
+    },
   });
 
   if (existing) {
@@ -42,12 +79,13 @@ async function seedDemoDay() {
   }
 
   const activeHabits = await prisma.habit.findMany({
-    where: { isActive: true },
+    where: { userId, isActive: true },
     orderBy: [{ order: "asc" }, { createdAt: "asc" }],
   });
 
   const created = await prisma.dailyRecord.create({
     data: {
+      userId,
       date: yesterday,
       notes:
         "Momentum felt strong after a focused morning. Afternoon context switching slowed me down.",
@@ -110,7 +148,9 @@ async function seedDemoDay() {
   });
 
   const metrics = getMetricsFromCollections(refreshed.dailyHabits, refreshed.dailyTasks);
-  const streaks = getStreakSnapshots([{ wasSuccessfulDay: metrics.scorePercent >= SUCCESS_THRESHOLD }]);
+  const streaks = getStreakSnapshots([
+    { wasSuccessfulDay: metrics.scorePercent >= SUCCESS_THRESHOLD },
+  ]);
 
   await prisma.dailyRecord.update({
     where: { id: created.id },
@@ -122,8 +162,9 @@ async function seedDemoDay() {
 }
 
 async function main() {
-  await seedDefaultHabits();
-  await seedDemoDay();
+  await ensureUserExists(DEFAULT_USER_ID);
+  await seedDefaultHabits(DEFAULT_USER_ID);
+  await seedDemoDay(DEFAULT_USER_ID);
 }
 
 main()

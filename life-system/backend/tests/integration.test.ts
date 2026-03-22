@@ -7,8 +7,14 @@ import { buildApp } from "../src/server.js";
 const authHeaders = {
   authorization: `Bearer ${process.env.BACKEND_API_TOKEN ?? "dev-local-token"}`,
   "x-user-id": process.env.BACKEND_TEST_USER_ID ?? "test-zw-user",
-  "content-type": "application/json",
 };
+
+function getAuthHeaders(userId = process.env.BACKEND_TEST_USER_ID ?? "test-zw-user") {
+  return {
+    ...authHeaders,
+    "x-user-id": userId,
+  };
+}
 
 test("health endpoint is public", async () => {
   const app = buildApp();
@@ -37,7 +43,7 @@ test("daily today endpoint responds for authorized user", async () => {
     const response = await app.inject({
       method: "GET",
       url: "/api/daily/today",
-      headers: authHeaders,
+      headers: getAuthHeaders(),
     });
 
     assert.equal(response.statusCode, 200);
@@ -56,7 +62,7 @@ test("concurrent task writes keep streak snapshots valid", async () => {
     const todayResponse = await app.inject({
       method: "GET",
       url: "/api/daily/today",
-      headers: authHeaders,
+      headers: getAuthHeaders(),
     });
 
     const todayBody = todayResponse.json() as { data: { id: string; dailyHabits: Array<{ id: string }> } };
@@ -67,7 +73,7 @@ test("concurrent task writes keep streak snapshots valid", async () => {
         app.inject({
           method: "POST",
           url: "/api/daily/tasks",
-          headers: authHeaders,
+          headers: getAuthHeaders(),
           payload: {
             dailyRecordId,
             title: `Concurrent task ${index + 1}`,
@@ -83,7 +89,7 @@ test("concurrent task writes keep streak snapshots valid", async () => {
           app.inject({
             method: "PATCH",
             url: `/api/daily/habits/${todayBody.data.dailyHabits[0].id}/toggle`,
-            headers: authHeaders,
+            headers: getAuthHeaders(),
             payload: { completed: index % 2 === 0 },
           }),
         ),
@@ -93,7 +99,7 @@ test("concurrent task writes keep streak snapshots valid", async () => {
     const refreshed = await app.inject({
       method: "GET",
       url: "/api/daily/today",
-      headers: authHeaders,
+      headers: getAuthHeaders(),
     });
 
     assert.equal(refreshed.statusCode, 200);
@@ -104,6 +110,99 @@ test("concurrent task writes keep streak snapshots valid", async () => {
     assert.ok(refreshedBody.data.dailyTasks.length >= 8);
     assert.ok(refreshedBody.data.currentStreakSnapshot >= 0);
     assert.ok(refreshedBody.data.longestStreakSnapshot >= refreshedBody.data.currentStreakSnapshot);
+  } finally {
+    await app.close();
+  }
+});
+
+test("duplicate habit creation returns conflict", async () => {
+  const app = buildApp();
+  const userId = `conflict-user-${Date.now()}`;
+
+  try {
+    const first = await app.inject({
+      method: "POST",
+      url: "/api/habits",
+      headers: getAuthHeaders(userId),
+      payload: { name: "Read" },
+    });
+
+    assert.equal(first.statusCode, 201);
+
+    const second = await app.inject({
+      method: "POST",
+      url: "/api/habits",
+      headers: getAuthHeaders(userId),
+      payload: { name: "Read" },
+    });
+
+    assert.equal(second.statusCode, 409);
+    const body = second.json() as { error: { code: string; message: string } };
+    assert.equal(body.error.code, "CONFLICT");
+  } finally {
+    await app.close();
+  }
+});
+
+test("missing record mutations return not found", async () => {
+  const app = buildApp();
+  const userId = `missing-user-${Date.now()}`;
+  const headers = getAuthHeaders(userId);
+  const cases = [
+    {
+      method: "PATCH",
+      url: "/api/habits/unknown-habit",
+      payload: { name: "Renamed" },
+    },
+    {
+      method: "PATCH",
+      url: "/api/habits/unknown-habit/active",
+      payload: { isActive: false },
+    },
+    {
+      method: "PATCH",
+      url: "/api/daily/tasks/unknown-task/toggle",
+      payload: { completed: true },
+    },
+    {
+      method: "PATCH",
+      url: "/api/daily/tasks/unknown-task/move",
+      payload: { direction: "up" },
+    },
+    {
+      method: "DELETE",
+      url: "/api/daily/tasks/unknown-task",
+    },
+    {
+      method: "PATCH",
+      url: "/api/daily/habits/unknown-habit/toggle",
+      payload: { completed: true },
+    },
+    {
+      method: "PATCH",
+      url: "/api/weekly/reviews/unknown-review",
+      payload: {
+        whatWentWell: "",
+        whatWentBadly: "",
+        whatNeedsToImprove: "",
+        nextWeekGoals: "",
+      },
+    },
+  ] as const;
+
+  try {
+    for (const testCase of cases) {
+      const response = await app.inject({
+        method: testCase.method,
+        url: testCase.url,
+        headers,
+        payload: testCase.payload,
+      });
+
+      assert.equal(response.statusCode, 404, `${testCase.method} ${testCase.url}`);
+      const body = response.json() as { error: { code: string } };
+      assert.equal(body.error.code, "NOT_FOUND");
+    }
   } finally {
     await app.close();
   }

@@ -33,7 +33,7 @@ export function HistoryDayCard({
             ) : null}
           </div>
           <p className="mt-2 text-sm text-[color:var(--text-secondary)]">
-            {record.totalCompletedItems} completed • {record.totalMissedItems} missed
+            {record.totalCompletedItems} completed, {record.totalMissedItems} missed
           </p>
         </div>
         <ArrowRight className="h-4 w-4 text-[color:var(--text-tertiary)]" />

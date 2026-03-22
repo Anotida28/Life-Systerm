@@ -11,7 +11,7 @@ export function HabitForm({
   onCreate,
   isBusy,
 }: {
-  onCreate: (name: string) => Promise<void>;
+  onCreate: (name: string) => Promise<boolean>;
   isBusy?: boolean;
 }) {
   const [value, setValue] = useState("");
@@ -31,8 +31,11 @@ export function HabitForm({
             return;
           }
 
-          await onCreate(name);
-          setValue("");
+          const created = await onCreate(name);
+
+          if (created) {
+            setValue("");
+          }
         }}
       >
         <Input

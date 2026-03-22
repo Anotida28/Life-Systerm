@@ -1,268 +1,134 @@
 # Life System
 
-Life System is a premium personal discipline and performance platform built as a mobile-first daily operating system. It combines non-negotiables, personal tasks, work tasks, rollover handling, reflection, weighted scoring, streak tracking, weekly review, and deterministic insights in one cohesive product.
+Life System is a personal discipline and performance platform built around a daily operating workflow. It combines recurring habits, flexible tasks, streaks, weekly review, history, and deterministic insights.
 
-## Product Overview
+## Current Architecture
 
-Core daily questions:
+The repository has two active apps:
 
-1. What must I do today?
-2. What did I actually do?
-3. How well did I perform?
-4. What patterns should I improve?
+- `frontend/`: Next.js 16 App Router UI and server actions
+- `backend/`: Fastify API service with Prisma
 
-Life System is designed as a strong MVP with clean expansion points for AI summaries, reminders, PWA installability, authentication, cloud sync, charts, exports, and richer analytics.
+The backend is the single source of truth for data, schema, seeding, and local database setup. In local development, both apps point at the same SQLite file: `frontend/prisma/dev.db`.
 
-## Screenshots
+## Core Capabilities
 
-Add screenshots here as the UI evolves:
-
-- `Dashboard`
-- `Today`
-- `Habits`
-- `History`
-- `Weekly Review`
-- `Insights`
-
-## MVP Features
-
-- Auto-created daily records
-- Recurring non-negotiables seeded with `Pray`, `Gym`, and `Course`
-- Personal and work task capture with instant save interactions
-- Automatic rollover for incomplete personal and work tasks
-- Weighted daily score that updates live
-- Success threshold and streak tracking
+- Auto-create and load today's record
+- Recurring habits loaded into each new day
+- Personal and work task management
+- Automatic rollover of incomplete personal and work tasks
+- Weighted daily scoring and success threshold tracking
+- Streak snapshots
 - Daily notes and end-of-day review fields
-- Dashboard overview with weekly context
-- History list and daily detail views
-- Weekly review with saved reflection fields
-- Deterministic insights engine with AI-ready boundaries
-- Premium dark-first interface with elegant light mode support
+- Weekly summary and editable reflection
+- Deterministic insights over recent performance
 
-## Scoring Logic
+## Score Model
 
-Category weights:
-
-- Non-negotiables: `50%`
+- Habits: `50%`
 - Personal tasks: `25%`
 - Work tasks: `25%`
+- `scorePercent = round(((habitsScore * 0.5) + (personalScore * 0.25) + (workScore * 0.25)) * 100)`
+- Success threshold: `scorePercent >= 80`
 
-Category score formulas:
+## Timezone and Date Rules
 
-- `habitsScore = H_total === 0 ? 1 : H_done / H_total`
-- `personalScore = P_total === 0 ? 1 : P_done / P_total`
-- `workScore = W_total === 0 ? 1 : W_done / W_total`
-
-Final score:
-
-- `score = round(((habitsScore * 0.5) + (personalScore * 0.25) + (workScore * 0.25)) * 100)`
-
-Stored day metrics include:
-
-- completed and missed totals
-- per-category completion counts
-- per-category scores
-- final `scorePercent`
-- success flag
-- streak snapshots
-
-## Streak Logic
-
-- A successful day is any day with `score >= 80`
-- Successful day: current streak increments
-- Unsuccessful day: current streak resets to `0`
-- Longest streak persists historically
-- Each `DailyRecord` stores `currentStreakSnapshot` and `longestStreakSnapshot`
-
-## Rollover Logic
-
-When a new day is created:
-
-- active habits are loaded into the day
-- incomplete `PERSONAL` tasks from yesterday are copied forward
-- incomplete `WORK` tasks from yesterday are copied forward
-- carried tasks keep their title and type
-- carried tasks are marked with:
-  - `isCarriedOver = true`
-  - `carriedOverFromDate`
-
-Non-negotiables do not roll over because they recur automatically.
-
-## Architecture
-
-The app is split into a single working Next.js application in `frontend/` plus a backend placeholder in `backend/`.
-
-High-level architecture:
-
-- `frontend/app/`
-  Route entry points for dashboard, today, habits, history, weekly review, and insights.
-- `frontend/components/`
-  Domain-specific UI grouped by dashboard, daily, habits, history, insights, layout, shared, and weekly.
-- `frontend/lib/domain/`
-  Centralized domain logic for day creation, scoring, streaks, dashboard stats, history, weekly summaries, and insights.
-- `frontend/actions/`
-  Server actions for daily mutations, habit management, insights refresh, and weekly review updates.
-- `frontend/prisma/`
-  Prisma schema, seed script, checked-in SQL migration, and the migration runner.
-- `frontend/lib/ai/`
-  AI-ready service boundary that currently returns rule-based analysis.
-
-## Tech Stack
-
-- Next.js 16 App Router
-- TypeScript
-- Tailwind CSS
-- Prisma ORM
-- SQLite
-- Lucide React
-- Framer Motion
-- Zod
-- date-fns
-- shadcn-style component primitives built in the codebase
-
-## Folder Structure
-
-```text
-life-system/
-  backend/
-    README.md
-  frontend/
-    actions/
-    app/
-    components/
-      dashboard/
-      daily/
-      habits/
-      history/
-      insights/
-      layout/
-      shared/
-      weekly/
-    hooks/
-    lib/
-      ai/
-      domain/
-    prisma/
-      migrations/
-      schema.prisma
-      seed.ts
-      migrate.ts
-    public/
-    styles/
-    types/
-  README.md
-```
+- App timezone is fixed to `Africa/Harare` for date normalization, streak boundaries, and weekly ranges.
 
 ## Local Setup
 
-From the repository root:
+From repository root:
 
 ```bash
-cd frontend
+# 1) Install and configure the backend
+cd backend
 npm install
-npm run db:generate
-npm run db:migrate
-npm run db:seed
+npm run prisma:generate
+npm run prisma:push
+npm run prisma:seed
+
+# 2) Start the backend
+npm run dev
+
+# 3) In a second terminal, install and start the frontend
+cd ../frontend
+npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Before starting the apps:
+
+- copy `backend/.env.example` to `backend/.env`
+- copy `frontend/.env.example` to `frontend/.env.local`
+
+App URLs:
+
+- Frontend: `http://localhost:3000`
+- Backend: `http://127.0.0.1:4000`
+- Health: `GET http://127.0.0.1:4000/health`
 
 ## Environment Variables
 
-`frontend/.env`
+### Backend (`backend/.env`)
 
 ```env
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="file:../../frontend/prisma/dev.db"
+PORT="4000"
+NODE_ENV="development"
+BACKEND_API_TOKEN="dev-local-token"
+DEFAULT_USER_ID="local-zw-user"
 SEED_DEMO_DAY="false"
 ```
 
-Notes:
+### Frontend (`frontend/.env.local`)
 
-- `DATABASE_URL` points to the local SQLite database file.
-- `SEED_DEMO_DAY="true"` optionally seeds an example historical day in addition to the default habits.
+```env
+BACKEND_URL="http://127.0.0.1:4000"
+BACKEND_API_TOKEN="dev-local-token"
+BACKEND_USER_ID="local-zw-user"
+```
 
-## Database Workflow
+## Route Surface
 
-Prisma assets:
+Frontend routes:
 
-- schema: `frontend/prisma/schema.prisma`
-- migration SQL: `frontend/prisma/migrations/0001_init/migration.sql`
-- migration runner: `frontend/prisma/migrate.ts`
-- seed script: `frontend/prisma/seed.ts`
+- `/`
+- `/today`
+- `/habits`
+- `/history`
+- `/history/[date]`
+- `/weekly`
+- `/insights`
 
-Commands:
+Backend API groups:
 
-- `npm run db:generate`
-  Regenerates the Prisma client from the schema.
-- `npm run db:migrate`
-  Applies the checked-in Prisma SQL migrations to the SQLite database.
-- `npm run db:seed`
-  Seeds default habits and optional demo data.
-- `npm run db:studio`
-  Opens Prisma Studio.
+- `/health`
+- `/api/habits`
+- `/api/daily`
+- `/api/history`
+- `/api/weekly`
+- `/api/insights`
 
-## Routes
+## Tech Stack
 
-- `/` dashboard
-- `/today` daily workflow
-- `/habits` non-negotiables management
-- `/history` daily archive
-- `/history/[date]` daily detail
-- `/weekly` weekly review
-- `/insights` data-driven analysis
+- Next.js 16 + React 19 + TypeScript
+- Fastify + TypeScript
+- Prisma ORM
+- SQLite
+- Tailwind CSS
+- Framer Motion
+- Zod
 
-## AI-Ready Extension Path
+## Testing and Quality Commands
 
-Current boundary:
+Frontend (`frontend/`):
 
-- `frontend/lib/ai/performance.ts`
-
-Current functions:
-
-- `analyzePerformanceData(data, fallbackInsights)`
-- `summarizeWeek(data, fallbackSummary)`
-- `recommendOptimizations(data, fallbackRecommendations)`
-
-Future OpenAI flow:
-
-1. Aggregate normalized habit, task, score, streak, and reflection data for the last 7, 30, or 90 days.
-2. Send that summary to an AI endpoint.
-3. Ask for:
-   - behavior analysis
-   - optimization recommendations
-   - weekly summaries
-   - bottleneck detection
-   - load balancing suggestions
-4. Merge AI output with deterministic guardrails.
-5. Render the result in the Insights and Weekly Review surfaces.
-
-Recommended future AI use cases:
-
-- "Analyze my past 30 days"
-- "What is causing low scores?"
-- "Which habits correlate with better days?"
-- "How should I restructure my day?"
-- "Summarize this week"
-
-## Future Roadmap
-
-- Reminder system
-- PWA installability
-- Authentication and multi-device sync
-- Rich charting and month views
-- Exported reports
-- Voice notes
-- Category weighting controls
-- Monthly and quarterly reviews
-- AI-generated narratives and optimization plans
-
-## Validation
-
-The following commands were run successfully in this workspace:
-
-- `npm run db:generate`
-- `npm run db:migrate`
-- `npm run db:seed`
 - `npm run lint`
+- `npm run test`
+- `npm run build`
+
+Backend (`backend/`):
+
+- `npm run typecheck`
+- `npm run test`
 - `npm run build`

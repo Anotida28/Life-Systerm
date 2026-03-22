@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Flame } from "lucide-react";
 
 import {
@@ -11,22 +11,46 @@ import {
 } from "@/actions/habits";
 import { HabitCard } from "@/components/habits/habit-card";
 import { HabitForm } from "@/components/habits/habit-form";
+import { ActionNotice } from "@/components/shared/action-notice";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SectionCard } from "@/components/shared/section-card";
+import { getBackendErrorMessage } from "@/lib/backend-api";
 import type { HabitView } from "@/types";
 
 export function HabitsList({ initialHabits }: { initialHabits: HabitView[] }) {
   const [habits, setHabits] = useState(initialHabits);
   const [isBusy, setIsBusy] = useState(false);
+  const [feedback, setFeedback] = useState<{
+    tone: "success" | "danger";
+    message: string;
+  } | null>(null);
 
-  async function run(action: () => Promise<HabitView[]>) {
+  useEffect(() => {
+    setHabits(initialHabits);
+  }, [initialHabits]);
+
+  async function run(
+    action: () => Promise<HabitView[]>,
+    successMessage: string,
+  ) {
+    setFeedback(null);
     setIsBusy(true);
 
     try {
       const next = await action();
       setHabits(next);
+      setFeedback({
+        tone: "success",
+        message: successMessage,
+      });
+      return true;
     } catch (error) {
       console.error(error);
+      setFeedback({
+        tone: "danger",
+        message: getBackendErrorMessage(error, "Could not save habit changes."),
+      });
+      return false;
     } finally {
       setIsBusy(false);
     }
@@ -38,9 +62,15 @@ export function HabitsList({ initialHabits }: { initialHabits: HabitView[] }) {
   return (
     <div className="space-y-6">
       <HabitForm
-        onCreate={(name) => run(() => createHabitAction({ name }))}
+        onCreate={(name) =>
+          run(() => createHabitAction({ name }), "Habit added successfully.")
+        }
         isBusy={isBusy}
       />
+
+      {feedback ? (
+        <ActionNotice tone={feedback.tone} message={feedback.message} />
+      ) : null}
 
       <SectionCard
         title="Habit library"
@@ -53,11 +83,21 @@ export function HabitsList({ initialHabits }: { initialHabits: HabitView[] }) {
                 <HabitCard
                   key={`${habit.id}-${habit.name}-${habit.isActive ? "active" : "archived"}`}
                   habit={habit}
-                  onSave={(id, name) => run(() => updateHabitAction({ id, name }))}
-                  onToggleActive={(id, isActive) =>
-                    run(() => toggleHabitActiveAction({ id, isActive }))
+                  onSave={(id, name) =>
+                    run(() => updateHabitAction({ id, name }), "Habit updated successfully.")
                   }
-                  onMove={(id, direction) => run(() => moveHabitAction({ id, direction }))}
+                  onToggleActive={async (id, isActive) => {
+                    await run(
+                      () => toggleHabitActiveAction({ id, isActive }),
+                      isActive ? "Habit activated successfully." : "Habit archived successfully.",
+                    );
+                  }}
+                  onMove={async (id, direction) => {
+                    await run(
+                      () => moveHabitAction({ id, direction }),
+                      "Habit order updated successfully.",
+                    );
+                  }}
                   isBusy={isBusy}
                 />
               ))}
@@ -72,11 +112,21 @@ export function HabitsList({ initialHabits }: { initialHabits: HabitView[] }) {
                   <HabitCard
                     key={`${habit.id}-${habit.name}-${habit.isActive ? "active" : "archived"}`}
                     habit={habit}
-                    onSave={(id, name) => run(() => updateHabitAction({ id, name }))}
-                    onToggleActive={(id, isActive) =>
-                      run(() => toggleHabitActiveAction({ id, isActive }))
+                    onSave={(id, name) =>
+                      run(() => updateHabitAction({ id, name }), "Habit updated successfully.")
                     }
-                    onMove={(id, direction) => run(() => moveHabitAction({ id, direction }))}
+                    onToggleActive={async (id, isActive) => {
+                      await run(
+                        () => toggleHabitActiveAction({ id, isActive }),
+                        isActive ? "Habit activated successfully." : "Habit archived successfully.",
+                      );
+                    }}
+                    onMove={async (id, direction) => {
+                      await run(
+                        () => moveHabitAction({ id, direction }),
+                        "Habit order updated successfully.",
+                      );
+                    }}
                     isBusy={isBusy}
                   />
                 ))}

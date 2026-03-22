@@ -124,6 +124,7 @@ export function EndOfDayReviewForm({
               }
               placeholder="What are you proud of today?"
               className="min-h-24"
+              disabled={isBusy}
             />
           </div>
           <div>
@@ -140,6 +141,7 @@ export function EndOfDayReviewForm({
               }
               placeholder="What friction showed up today?"
               className="min-h-24"
+              disabled={isBusy}
             />
           </div>
         </div>

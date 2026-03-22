@@ -1,8 +1,11 @@
-import type { DailyHabit, DailyTask } from "@prisma/client";
-
 import { CATEGORY_WEIGHTS, SUCCESS_THRESHOLD } from "@/lib/constants";
 import { isToday, parseDateKey } from "@/lib/date";
-import type { DailyRecordView, DayStatus } from "@/types";
+import type {
+  DailyHabitItem,
+  DailyRecordView,
+  DailyTaskItem,
+  DayStatus,
+} from "@/types";
 
 export function calculateCategoryScores(input: {
   totalHabits: number;
@@ -42,8 +45,8 @@ export function calculateOverallScore(scores: {
 }
 
 export function getMetricsFromCollections(
-  dailyHabits: Pick<DailyHabit, "completed">[],
-  dailyTasks: Pick<DailyTask, "completed" | "type">[],
+  dailyHabits: Pick<DailyHabitItem, "completed">[],
+  dailyTasks: Pick<DailyTaskItem, "completed" | "type">[],
 ) {
   const personalTasks = dailyTasks.filter((task) => task.type === "PERSONAL");
   const workTasks = dailyTasks.filter((task) => task.type === "WORK");
@@ -86,25 +89,6 @@ export function getMetricsFromCollections(
     scorePercent,
     wasSuccessfulDay: scorePercent >= SUCCESS_THRESHOLD,
   };
-}
-
-export function getStreakSnapshots(records: Array<{ wasSuccessfulDay: boolean }>) {
-  let currentStreak = 0;
-  let longestStreak = 0;
-
-  return records.map((record) => {
-    if (record.wasSuccessfulDay) {
-      currentStreak += 1;
-      longestStreak = Math.max(longestStreak, currentStreak);
-    } else {
-      currentStreak = 0;
-    }
-
-    return {
-      currentStreakSnapshot: currentStreak,
-      longestStreakSnapshot: longestStreak,
-    };
-  });
 }
 
 export function calculateDayStatus(input: {

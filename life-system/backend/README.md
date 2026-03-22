@@ -1,18 +1,18 @@
 # Life System Backend
 
-Dedicated API service for Life System, built with Fastify + TypeScript + Prisma.
+Fastify + TypeScript API service for Life System, backed by Prisma and SQLite.
 
-## Current Status
+## Role in the Repo
 
-Initial backend scaffold is implemented with:
+The backend is the canonical source of truth for:
 
-- API server bootstrap and centralized error handling
-- Prisma client and local SQLite connection support
-- Contract-style response envelope (`success`, `data`, `error`)
-- Health endpoint
-- Habit endpoints (list/create/update/activate/reorder)
-- Daily endpoints (today load/create, task create/update/toggle/delete, habit toggle, notes/review update)
-- Weekly and insights route placeholders (`501 Not Implemented`)
+- Prisma schema
+- database setup
+- seed data
+- validation and persistence rules
+- API error semantics
+
+The local development database lives at `frontend/prisma/dev.db`, but it is owned by the backend setup flow.
 
 ## Setup
 
@@ -21,37 +21,54 @@ From repository root:
 ```bash
 cd backend
 npm install
-copy .env.example .env
 npm run prisma:generate
+npm run prisma:push
+npm run prisma:seed
 npm run dev
 ```
 
-Server default:
+Before running the server, copy `.env.example` to `.env`.
 
-- `http://127.0.0.1:4000`
+Defaults:
 
-Health check:
-
-- `GET /health`
+- API: `http://127.0.0.1:4000`
+- Health: `GET /health`
 
 ## Environment Variables
 
 Defined in `.env.example`:
 
-- `DATABASE_URL` defaults to `file:../../frontend/prisma/dev.db`
-- `PORT` defaults to `4000`
-- `NODE_ENV` defaults to `development`
-- `BACKEND_API_TOKEN` token required for all `/api/*` endpoints
-- `DEFAULT_USER_ID` default local user bootstrap id
+- `DATABASE_URL` default `file:../../frontend/prisma/dev.db`
+- `PORT` default `4000`
+- `NODE_ENV` default `development`
+- `BACKEND_API_TOKEN` required bearer token for `/api/*`
+- `DEFAULT_USER_ID` default seeded user and request fallback
+- `SEED_DEMO_DAY` optional demo-data toggle for `npm run prisma:seed`
 
 ## Authentication and User Isolation
 
 - `/health` is public.
-- All `/api/*` endpoints require:
-	- `Authorization: Bearer <BACKEND_API_TOKEN>`
-	- `x-user-id: <user-id>`
-- Backend data is scoped by `userId` on core tables (`Habit`, `DailyRecord`, `WeeklyReview`, `InsightSnapshot`).
-- User records are upserted automatically when valid authenticated requests arrive.
+- All `/api/*` routes require:
+  - `Authorization: Bearer <BACKEND_API_TOKEN>`
+  - `x-user-id: <user-id>`
+- User records are auto-upserted on authenticated requests.
+- Core records are scoped by `userId`.
+
+## Error Contract
+
+The API returns a consistent response envelope:
+
+- `success`
+- `data`
+- `error`
+
+Structured backend errors currently resolve to:
+
+- `400 VALIDATION_ERROR`
+- `401 UNAUTHORIZED`
+- `404 NOT_FOUND`
+- `409 CONFLICT`
+- `500 INTERNAL_ERROR`
 
 ## Implemented Endpoints
 
@@ -73,24 +90,42 @@ Defined in `.env.example`:
 - `POST /api/daily/tasks`
 - `PATCH /api/daily/tasks/:id/title`
 - `PATCH /api/daily/tasks/:id/toggle`
+- `PATCH /api/daily/tasks/:id/move`
 - `DELETE /api/daily/tasks/:id`
 - `PATCH /api/daily/habits/:id/toggle`
 - `PATCH /api/daily/notes`
 - `PATCH /api/daily/review`
 
-### Weekly (placeholder)
+### History
 
-- `GET /api/weekly/summary` -> `501`
-- `PATCH /api/weekly/reviews/:id` -> `501`
+- `GET /api/history`
+- `GET /api/history/:date`
 
-### Insights (placeholder)
+### Weekly
 
-- `GET /api/insights` -> `501`
-- `POST /api/insights/refresh` -> `501`
+- `GET /api/weekly/summary`
+- `PATCH /api/weekly/reviews/:id`
 
-## Next Build Targets
+### Insights
 
-1. Move weekly summary domain logic into backend service and implement `GET /api/weekly/summary`.
-2. Move insights domain logic into backend service and implement insights endpoints.
-3. Add transaction hardening for ordering and streak recalculation paths.
-4. Add integration tests and concurrency tests before frontend cutover.
+- `GET /api/insights`
+- `POST /api/insights/refresh`
+
+## Business Rules
+
+- Dates normalize to `Africa/Harare`.
+- Habits are weighted at 50%, personal tasks 25%, work tasks 25%.
+- Success threshold is 80%.
+- Creating a new day loads active habits and rolls over incomplete personal and work tasks.
+- Score-changing mutations recalculate daily metrics and streak snapshots.
+
+## Scripts
+
+- `npm run dev` start backend in watch mode
+- `npm run build` compile TypeScript
+- `npm run start` run compiled output
+- `npm run typecheck` TypeScript no-emit check
+- `npm run test` run backend tests
+- `npm run prisma:generate` generate Prisma client
+- `npm run prisma:push` push schema to the local DB
+- `npm run prisma:seed` seed default habits and optional demo data

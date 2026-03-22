@@ -1,5 +1,6 @@
 import "dotenv/config";
 
+import { Prisma } from "@prisma/client";
 import Fastify from "fastify";
 import { pathToFileURL } from "node:url";
 import { ZodError } from "zod";
@@ -27,6 +28,33 @@ export function buildApp() {
     if (error instanceof ZodError) {
       reply.code(400).send(errorResponse("VALIDATION_ERROR", "Invalid request data"));
       return;
+    }
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2025") {
+        reply
+          .code(404)
+          .send(errorResponse("NOT_FOUND", "Requested resource was not found"));
+        return;
+      }
+
+      if (error.code === "P2002") {
+        const targets = Array.isArray(error.meta?.target) ? error.meta.target : [];
+        const isHabitNameConflict = targets.includes("name");
+
+        reply
+          .code(409)
+          .send(
+            errorResponse(
+              "CONFLICT",
+              isHabitNameConflict
+                ? "A habit with this name already exists"
+                : "A record with the same value already exists",
+              isHabitNameConflict ? { name: ["A habit with this name already exists"] } : undefined,
+            ),
+          );
+        return;
+      }
     }
 
     app.log.error(error);

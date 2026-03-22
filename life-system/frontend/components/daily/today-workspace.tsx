@@ -1,6 +1,5 @@
 "use client";
 
-import type { TaskType } from "@prisma/client";
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 
@@ -8,6 +7,7 @@ import {
   createTaskAction,
   deleteTaskAction,
   moveTaskAction,
+  refreshTodayAction,
   toggleDailyHabitAction,
   toggleTaskAction,
   updateDailyNotesAction,
@@ -21,8 +21,12 @@ import { NotesEditor } from "@/components/daily/notes-editor";
 import { ScoreBreakdownCard } from "@/components/daily/score-breakdown-card";
 import { StreakCard } from "@/components/daily/streak-card";
 import { TaskSection } from "@/components/daily/task-section";
-import { syncDailyRecordViewMetrics } from "@/lib/domain/scoring";
-import type { DailyRecordView, DailyTaskItem } from "@/types";
+import { ActionNotice } from "@/components/shared/action-notice";
+import { getBackendErrorMessage } from "@/lib/backend-api";
+import { syncDailyRecordViewMetrics } from "@/lib/scoring";
+import type { DailyRecordView, DailyTaskItem, TaskType } from "@/types";
+
+type WorkspaceSection = "habits" | "personal" | "work" | "notes" | "review";
 
 function sortTasks(tasks: DailyTaskItem[]) {
   return [...tasks].sort((left, right) => {
@@ -66,7 +70,11 @@ function swapTaskOrder(
 
 export function TodayWorkspace({ initialRecord }: { initialRecord: DailyRecordView }) {
   const [record, setRecord] = useState(initialRecord);
-  const [isBusy, setIsBusy] = useState(false);
+  const [pendingSections, setPendingSections] = useState<WorkspaceSection[]>([]);
+  const [feedback, setFeedback] = useState<{
+    tone: "success" | "danger";
+    message: string;
+  } | null>(null);
 
   const personalTasks = useMemo(
     () => sortTasks(record.dailyTasks.filter((task) => task.type === "PERSONAL")),
@@ -77,27 +85,67 @@ export function TodayWorkspace({ initialRecord }: { initialRecord: DailyRecordVi
     [record.dailyTasks],
   );
 
+  function startPending(section: WorkspaceSection) {
+    setPendingSections((current) =>
+      current.includes(section) ? current : [...current, section],
+    );
+  }
+
+  function finishPending(section: WorkspaceSection) {
+    setPendingSections((current) => current.filter((entry) => entry !== section));
+  }
+
+  function isPending(section: WorkspaceSection) {
+    return pendingSections.includes(section);
+  }
+
+  async function restoreRecord(previous: DailyRecordView) {
+    try {
+      const refreshed = await refreshTodayAction();
+      setRecord(refreshed);
+    } catch {
+      setRecord(previous);
+    }
+  }
+
   async function mutateRecord(
+    section: WorkspaceSection,
     optimisticUpdater: (current: DailyRecordView) => DailyRecordView,
     action: () => Promise<DailyRecordView>,
+    successMessage: string,
   ) {
     const previous = record;
+    setFeedback(null);
     setRecord((current) => syncDailyRecordViewMetrics(optimisticUpdater(current)));
-    setIsBusy(true);
+    startPending(section);
 
     try {
       const next = await action();
       setRecord(next);
+      setFeedback({
+        tone: "success",
+        message: successMessage,
+      });
+      return true;
     } catch (error) {
       console.error(error);
-      setRecord(previous);
+      await restoreRecord(previous);
+      setFeedback({
+        tone: "danger",
+        message: getBackendErrorMessage(error, "Could not save your changes."),
+      });
+      return false;
     } finally {
-      setIsBusy(false);
+      finishPending(section);
     }
   }
 
   async function addTask(title: string, type: TaskType) {
-    await mutateRecord(
+    const section = type === "PERSONAL" ? "personal" : "work";
+    const label = type === "PERSONAL" ? "Personal task" : "Work task";
+
+    return mutateRecord(
+      section,
       (current) => ({
         ...current,
         dailyTasks: [
@@ -109,8 +157,7 @@ export function TodayWorkspace({ initialRecord }: { initialRecord: DailyRecordVi
             completed: false,
             isCarriedOver: false,
             carriedOverFromDate: null,
-            order:
-              current.dailyTasks.filter((task) => task.type === type).length,
+            order: current.dailyTasks.filter((task) => task.type === type).length,
           },
         ],
       }),
@@ -120,11 +167,15 @@ export function TodayWorkspace({ initialRecord }: { initialRecord: DailyRecordVi
           title,
           type,
         }),
+      `${label} added successfully.`,
     );
   }
 
-  async function toggleTask(taskId: string, completed: boolean) {
+  async function toggleTask(taskId: string, completed: boolean, type: TaskType) {
+    const section = type === "PERSONAL" ? "personal" : "work";
+
     await mutateRecord(
+      section,
       (current) => ({
         ...current,
         dailyTasks: current.dailyTasks.map((task) =>
@@ -132,11 +183,15 @@ export function TodayWorkspace({ initialRecord }: { initialRecord: DailyRecordVi
         ),
       }),
       () => toggleTaskAction({ id: taskId, completed }),
+      "Task progress updated successfully.",
     );
   }
 
-  async function saveTask(taskId: string, title: string) {
-    await mutateRecord(
+  async function saveTask(taskId: string, title: string, type: TaskType) {
+    const section = type === "PERSONAL" ? "personal" : "work";
+
+    return mutateRecord(
+      section,
       (current) => ({
         ...current,
         dailyTasks: current.dailyTasks.map((task) =>
@@ -144,23 +199,32 @@ export function TodayWorkspace({ initialRecord }: { initialRecord: DailyRecordVi
         ),
       }),
       () => updateTaskAction({ taskId, title }),
+      "Task updated successfully.",
     );
   }
 
-  async function deleteTask(taskId: string) {
+  async function deleteTask(taskId: string, type: TaskType) {
+    const section = type === "PERSONAL" ? "personal" : "work";
+
     await mutateRecord(
+      section,
       (current) => ({
         ...current,
         dailyTasks: current.dailyTasks.filter((task) => task.id !== taskId),
       }),
       () => deleteTaskAction({ id: taskId }),
+      "Task deleted successfully.",
     );
   }
 
   async function moveTask(taskId: string, type: TaskType, direction: "up" | "down") {
+    const section = type === "PERSONAL" ? "personal" : "work";
+
     await mutateRecord(
+      section,
       (current) => swapTaskOrder(current, type, taskId, direction),
       () => moveTaskAction({ id: taskId, direction }),
+      "Task order updated successfully.",
     );
   }
 
@@ -175,6 +239,8 @@ export function TodayWorkspace({ initialRecord }: { initialRecord: DailyRecordVi
         <DailySummaryStrip record={record} />
       </div>
 
+      {feedback ? <ActionNotice tone={feedback.tone} message={feedback.message} /> : null}
+
       <div className="grid gap-6 xl:grid-cols-[1.25fr_0.9fr]">
         <div className="space-y-6">
           <HabitChecklist
@@ -182,6 +248,7 @@ export function TodayWorkspace({ initialRecord }: { initialRecord: DailyRecordVi
             completionRate={Math.round(record.habitsScore * 100)}
             onToggle={(habitId, completed) =>
               mutateRecord(
+                "habits",
                 (current) => ({
                   ...current,
                   dailyHabits: current.dailyHabits.map((habit) =>
@@ -189,9 +256,10 @@ export function TodayWorkspace({ initialRecord }: { initialRecord: DailyRecordVi
                   ),
                 }),
                 () => toggleDailyHabitAction({ id: habitId, completed }),
-              )
+                "Habit progress updated successfully.",
+              ).then(() => undefined)
             }
-            isBusy={isBusy}
+            isBusy={isPending("habits")}
           />
 
           <TaskSection
@@ -200,11 +268,11 @@ export function TodayWorkspace({ initialRecord }: { initialRecord: DailyRecordVi
             placeholder="Add a personal task"
             tasks={personalTasks}
             onAdd={(title) => addTask(title, "PERSONAL")}
-            onToggle={toggleTask}
-            onSave={saveTask}
-            onDelete={deleteTask}
+            onToggle={(taskId, completed) => toggleTask(taskId, completed, "PERSONAL")}
+            onSave={(taskId, title) => saveTask(taskId, title, "PERSONAL")}
+            onDelete={(taskId) => deleteTask(taskId, "PERSONAL")}
             onMove={(taskId, direction) => moveTask(taskId, "PERSONAL", direction)}
-            isBusy={isBusy}
+            isBusy={isPending("personal")}
           />
 
           <TaskSection
@@ -213,36 +281,41 @@ export function TodayWorkspace({ initialRecord }: { initialRecord: DailyRecordVi
             placeholder="Add a work task"
             tasks={workTasks}
             onAdd={(title) => addTask(title, "WORK")}
-            onToggle={toggleTask}
-            onSave={saveTask}
-            onDelete={deleteTask}
+            onToggle={(taskId, completed) => toggleTask(taskId, completed, "WORK")}
+            onSave={(taskId, title) => saveTask(taskId, title, "WORK")}
+            onDelete={(taskId) => deleteTask(taskId, "WORK")}
             onMove={(taskId, direction) => moveTask(taskId, "WORK", direction)}
-            isBusy={isBusy}
+            isBusy={isPending("work")}
           />
         </div>
 
         <div className="space-y-6">
           <NotesEditor
+            key={`${record.id}:${record.notes}`}
             value={record.notes}
             onSave={(notes) =>
               mutateRecord(
+                "notes",
                 (current) => ({
                   ...current,
                   notes,
                 }),
                 () => updateDailyNotesAction({ dailyRecordId: record.id, notes }),
-              )
+                "Notes saved successfully.",
+              ).then(() => undefined)
             }
-            isBusy={isBusy}
+            isBusy={isPending("notes")}
           />
 
           <EndOfDayReviewForm
+            key={`${record.id}:${record.mood ?? "none"}:${record.energy ?? "none"}:${record.winOfTheDay}:${record.whatSlowedMeDown}`}
             mood={record.mood}
             energy={record.energy}
             winOfTheDay={record.winOfTheDay}
             whatSlowedMeDown={record.whatSlowedMeDown}
             onSave={(review) =>
               mutateRecord(
+                "review",
                 (current) => ({
                   ...current,
                   ...review,
@@ -252,9 +325,10 @@ export function TodayWorkspace({ initialRecord }: { initialRecord: DailyRecordVi
                     dailyRecordId: record.id,
                     ...review,
                   }),
-              )
+                "End-of-day review saved successfully.",
+              ).then(() => undefined)
             }
-            isBusy={isBusy}
+            isBusy={isPending("review")}
           />
 
           <ScoreBreakdownCard record={record} />

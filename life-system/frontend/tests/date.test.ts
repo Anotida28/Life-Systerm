@@ -10,16 +10,14 @@ import {
 } from "../lib/date";
 
 describe("date helpers", () => {
-  it("normalizes date to start of day", () => {
-    const normalized = normalizeDate(new Date(2026, 2, 22, 18, 45, 13));
+  it("normalizes dates to the current Harare day key", () => {
+    const normalized = normalizeDate(new Date("2026-03-22T18:45:13+02:00"));
 
-    expect(normalized.getHours()).toBe(0);
-    expect(normalized.getMinutes()).toBe(0);
-    expect(normalized.getSeconds()).toBe(0);
+    expect(toDateKey(normalized)).toBe("2026-03-22");
   });
 
   it("round-trips date key conversion", () => {
-    const original = new Date(2026, 2, 22, 13, 20, 10);
+    const original = new Date("2026-03-22T13:20:10+02:00");
 
     const key = toDateKey(original);
     const parsed = parseDateKey(key);
@@ -29,14 +27,14 @@ describe("date helpers", () => {
   });
 
   it("returns Monday-to-Sunday week range", () => {
-    const { weekStart, weekEnd } = getWeekRange(new Date(2026, 2, 22));
+    const { weekStart, weekEnd } = getWeekRange(new Date("2026-03-22T12:00:00+02:00"));
 
-    expect(weekStart.getDay()).toBe(1);
-    expect(weekEnd.getDay()).toBe(0);
+    expect(toDateKey(weekStart)).toBe("2026-03-16");
+    expect(toDateKey(weekEnd)).toBe("2026-03-22");
   });
 
   it("computes previous day correctly", () => {
-    const previous = getPreviousDay(new Date(2026, 2, 22));
+    const previous = getPreviousDay(new Date("2026-03-22T12:00:00+02:00"));
 
     expect(toDateKey(previous)).toBe("2026-03-21");
   });

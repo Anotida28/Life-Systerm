@@ -17,7 +17,7 @@ export function HabitCard({
   isBusy,
 }: {
   habit: HabitView;
-  onSave: (id: string, name: string) => Promise<void>;
+  onSave: (id: string, name: string) => Promise<boolean>;
   onToggleActive: (id: string, isActive: boolean) => Promise<void>;
   onMove: (id: string, direction: "up" | "down") => Promise<void>;
   isBusy?: boolean;
@@ -48,8 +48,11 @@ export function HabitCard({
                     return;
                   }
 
-                  await onSave(habit.id, nextName);
-                  setIsEditing(false);
+                  const didSave = await onSave(habit.id, nextName);
+
+                  if (didSave) {
+                    setIsEditing(false);
+                  }
                 }}
               >
                 <Input

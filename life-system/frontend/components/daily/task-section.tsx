@@ -24,9 +24,9 @@ export function TaskSection({
   description: string;
   placeholder: string;
   tasks: DailyTaskItem[];
-  onAdd: (title: string) => Promise<void>;
+  onAdd: (title: string) => Promise<boolean>;
   onToggle: (taskId: string, completed: boolean) => Promise<void>;
-  onSave: (taskId: string, title: string) => Promise<void>;
+  onSave: (taskId: string, title: string) => Promise<boolean>;
   onDelete: (taskId: string) => Promise<void>;
   onMove: (taskId: string, direction: "up" | "down") => Promise<void>;
   isBusy?: boolean;

@@ -12,7 +12,7 @@ export function AddTaskInput({
   isBusy,
 }: {
   placeholder: string;
-  onSubmit: (title: string) => Promise<void>;
+  onSubmit: (title: string) => Promise<boolean>;
   isBusy?: boolean;
 }) {
   const [value, setValue] = useState("");
@@ -28,8 +28,11 @@ export function AddTaskInput({
           return;
         }
 
-        await onSubmit(nextValue);
-        setValue("");
+        const didSave = await onSubmit(nextValue);
+
+        if (didSave) {
+          setValue("");
+        }
       }}
     >
       <Input
