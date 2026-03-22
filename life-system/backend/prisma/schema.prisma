@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum TaskType {
+  PERSONAL
+  WORK
+}
+
+enum InsightSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum InsightCategory {
+  HABIT
+  BALANCE
+  WORKLOAD
+  TREND
+  PRODUCTIVITY
+  WEEKDAY
+  SUCCESS
+}
+
+model Habit {
+  id          String       @id @default(cuid())
+  userId      String       @default("local-zw-user")
+  name        String
+  isActive    Boolean      @default(true)
+  order       Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dailyHabits DailyHabit[]
+
+  @@unique([userId, name])
+  @@index([userId, order])
+}
+
+model DailyRecord {
+  id                     String      @id @default(cuid())
+  userId                 String      @default("local-zw-user")
+  date                   DateTime
+  notes                  String?
+  mood                   Int?
+  energy                 Int?
+  winOfTheDay            String?
+  whatSlowedMeDown       String?
+  totalHabits            Int         @default(0)
+  completedHabits        Int         @default(0)
+  missedHabits           Int         @default(0)
+  totalPersonalTasks     Int         @default(0)
+  completedPersonalTasks Int         @default(0)
+  missedPersonalTasks    Int         @default(0)
+  totalWorkTasks         Int         @default(0)
+  completedWorkTasks     Int         @default(0)
+  missedWorkTasks        Int         @default(0)
+  habitsScore            Float       @default(0)
+  personalScore          Float       @default(0)
+  workScore              Float       @default(0)
+  scorePercent           Int         @default(0)
+  wasSuccessfulDay       Boolean     @default(false)
+  currentStreakSnapshot  Int         @default(0)
+  longestStreakSnapshot  Int         @default(0)
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+  user                   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dailyHabits            DailyHabit[]
+  dailyTasks             DailyTask[]
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model DailyHabit {
+  id            String      @id @default(cuid())
+  dailyRecordId String
+  habitId       String?
+  labelSnapshot String
+  completed     Boolean     @default(false)
+  order         Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  dailyRecord   DailyRecord @relation(fields: [dailyRecordId], references: [id], onDelete: Cascade)
+  habit         Habit?      @relation(fields: [habitId], references: [id], onDelete: SetNull)
+
+  @@index([dailyRecordId, order])
+}
+
+model DailyTask {
+  id                  String      @id @default(cuid())
+  dailyRecordId       String
+  title               String
+  type                TaskType
+  completed           Boolean     @default(false)
+  isCarriedOver       Boolean     @default(false)
+  carriedOverFromDate DateTime?
+  order               Int         @default(0)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  dailyRecord         DailyRecord @relation(fields: [dailyRecordId], references: [id], onDelete: Cascade)
+
+  @@index([dailyRecordId, type, order])
+}
+
+model WeeklyReview {
+  id                 String   @id @default(cuid())
+  userId             String   @default("local-zw-user")
+  weekStart          DateTime
+  weekEnd            DateTime
+  totalTrackedDays   Int      @default(0)
+  averageScore       Int      @default(0)
+  bestDay            DateTime?
+  worstDay           DateTime?
+  successCount       Int      @default(0)
+  currentStreak      Int      @default(0)
+  longestStreak      Int      @default(0)
+  whatWentWell       String?
+  whatWentBadly      String?
+  whatNeedsToImprove String?
+  nextWeekGoals      String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekStart])
+  @@index([userId, weekStart])
+}
+
+model InsightSnapshot {
+  id           String          @id @default(cuid())
+  userId       String          @default("local-zw-user")
+  generatedAt  DateTime        @default(now())
+  title        String
+  message      String
+  severity     InsightSeverity
+  category     InsightCategory
+  metadataJson String?
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, generatedAt])
+}
+
+model User {
+  id               String            @id
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  habits           Habit[]
+  dailyRecords     DailyRecord[]
+  weeklyReviews    WeeklyReview[]
+  insightSnapshots InsightSnapshot[]
+}

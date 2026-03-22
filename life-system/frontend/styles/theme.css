@@ -1,0 +1,112 @@
+:root {
+  color-scheme: dark;
+  --bg: #06080f;
+  --bg-elevated: #0c1120;
+  --surface: #111726;
+  --surface-strong: #161d2f;
+  --surface-card: linear-gradient(180deg, rgba(17, 23, 38, 0.94), rgba(11, 16, 28, 0.96));
+  --line: rgba(151, 164, 192, 0.14);
+  --text-primary: #f3f7fb;
+  --text-secondary: rgba(230, 236, 244, 0.76);
+  --text-tertiary: rgba(168, 180, 199, 0.68);
+  --accent: #8d92ff;
+  --accent-strong: #7379ff;
+  --accent-soft: #4dd6c4;
+  --accent-foreground: #071019;
+  --success: #2dd4bf;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --card-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bg: #f3f6fb;
+    --bg-elevated: #ffffff;
+    --surface: #ffffff;
+    --surface-strong: #f8faff;
+    --surface-card: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(247, 249, 255, 0.96));
+    --line: rgba(13, 24, 45, 0.08);
+    --text-primary: #111728;
+    --text-secondary: rgba(17, 23, 40, 0.72);
+    --text-tertiary: rgba(63, 74, 95, 0.58);
+    --accent: #4a58ff;
+    --accent-strong: #3949ff;
+    --accent-soft: #0da39a;
+    --accent-foreground: #f8fbff;
+    --success: #0f9f8a;
+    --warning: #c78810;
+    --danger: #dc5d5d;
+    --card-shadow: 0 20px 60px rgba(45, 59, 88, 0.12);
+  }
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--text-primary);
+  --font-sans: var(--font-manrope);
+  --font-serif-display: var(--font-fraunces);
+}
+
+* {
+  border-color: var(--line);
+}
+
+html {
+  background:
+    radial-gradient(circle at top left, rgba(91, 96, 255, 0.16), transparent 30%),
+    radial-gradient(circle at top right, rgba(77, 214, 196, 0.12), transparent 30%),
+    var(--bg);
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(91, 96, 255, 0.1), transparent 30%),
+    radial-gradient(circle at top right, rgba(77, 214, 196, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 12%),
+    var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-manrope), sans-serif;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.3), transparent 78%);
+  opacity: 0.26;
+}
+
+::selection {
+  background: rgba(141, 146, 255, 0.28);
+}
+
+a,
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+textarea {
+  resize: none;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.22);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
