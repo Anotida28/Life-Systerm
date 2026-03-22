@@ -15,12 +15,7 @@ The backend is the source of truth for schema, persistence, seeding, and auth.
 
 The app now uses real session-based login instead of a hard-coded frontend service user.
 
-Seeded account:
-
-- Username: `Lourence`
-- Password: `RuvaMakoAno28`
-
-By default, that login is attached to `DEFAULT_USER_ID`, so the seeded user can keep using the main local dataset.
+A seeded login account is created by the backend seed flow. By default, that login is attached to `DEFAULT_USER_ID`, so the seeded user can keep using the main local dataset.
 
 ## Database Strategy
 
@@ -74,9 +69,9 @@ Environment setup:
 - `DATABASE_URL` -> Railway Postgres `DATABASE_URL`
 - `PORT` -> Railway provided
 - `DEFAULT_USER_ID` -> keep `local-zw-user` or change if you want a different seeded account owner
-- `SEED_LOGIN_USERNAME` -> `Lourence`
-- `SEED_LOGIN_DISPLAY_NAME` -> `Lourence`
-- `SEED_LOGIN_PASSWORD` -> `RuvaMakoAno28`
+- `SEED_LOGIN_USERNAME` -> seeded login username
+- `SEED_LOGIN_DISPLAY_NAME` -> seeded login display name
+- `SEED_LOGIN_PASSWORD` -> seeded login password
 - `SESSION_TTL_DAYS` -> `30`
 - `BACKEND_API_TOKEN` -> optional internal automation token only
 

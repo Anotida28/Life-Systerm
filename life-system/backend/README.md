@@ -38,12 +38,7 @@ Copy `.env.example` to `.env` before running the server.
 
 ## Seeded Login
 
-Default seeded login:
-
-- Username: `Lourence`
-- Password: `RuvaMakoAno28`
-
-By default the seeded login is attached to `DEFAULT_USER_ID`, which lets the login account reuse the main local dataset.
+A seeded login account is created during `npm run prisma:seed`. By default it is attached to `DEFAULT_USER_ID`, which lets the login account reuse the main local dataset.
 
 ## Environment Variables
 

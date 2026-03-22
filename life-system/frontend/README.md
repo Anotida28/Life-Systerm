@@ -18,14 +18,7 @@ Server actions call backend endpoints, manage session cookies, and revalidate th
 
 ## Authentication
 
-The frontend now uses a real login flow backed by backend sessions.
-
-Seeded account:
-
-- Username: `Lourence`
-- Password: `RuvaMakoAno28`
-
-Session cookies are stored server-side and protected routes are redirected to `/login` when no valid session exists.
+The frontend now uses a real login flow backed by backend sessions. Session cookies are stored server-side and protected routes are redirected to `/login` when no valid session exists.
 
 ## Setup
 

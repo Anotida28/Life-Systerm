@@ -75,14 +75,8 @@ export default function LoginPage() {
                 Welcome back
               </h2>
               <p className="mt-3 text-sm leading-6 text-[color:var(--text-secondary)]">
-                Use the seeded account to get started quickly.
+                Sign in with your account credentials to access your workspace.
               </p>
-            </div>
-
-            <div className="mb-6 rounded-[1.5rem] border border-[rgba(45,212,191,0.14)] bg-[rgba(45,212,191,0.08)] px-5 py-4 text-sm leading-6 text-[color:var(--text-primary)]">
-              Username: <span className="font-semibold">Lourence</span>
-              <br />
-              Password: <span className="font-semibold">RuvaMakoAno28</span>
             </div>
 
             <LoginForm />

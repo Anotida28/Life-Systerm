@@ -38,7 +38,7 @@ export function LoginForm() {
             <Input
               name="username"
               autoComplete="username"
-              placeholder="Lourence"
+              placeholder="Enter your username"
               className="h-12 pl-11"
               required
             />
